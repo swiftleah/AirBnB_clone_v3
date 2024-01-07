@@ -10,79 +10,95 @@ from models.user import User
 
 @app_views.route('/places/<place_id>/reviews', methods=['GET'],
                  strict_slashes=False)
-def all_reviews(place_id):
-    """gets list of all review objects by specific place_id"""
-    place = storage.get('Place', place_id)
-    if place is None:
+def get_reviews_by_place(place_id):
+    """ retrieves the list of all Review objects of a Place """
+    place = storage.get(Place, place_id)
+    if not place:
         abort(404)
-    review_save = storage.all("Review")
-    reviews = []
-    for value in review_save.values():
-        reviews.append(value_to_dict())
+
+    reviews = [review.to_dict() for review in place.reviews]
     return jsonify(reviews)
 
 
-@app_views.route('/review/<review_id>', methods=['GET'],
+@app_views.route('/reviews/<review_id>', methods=['GET'],
                  strict_slashes=False)
 def get_review(review_id):
-    """fetches review from storage"""
-    try:
-        review = storage.get('Review', review_id)
+    """ retrieves a Review object """
+    review = storage.get(Review, review_id)
+    if review:
         return jsonify(review.to_dict())
-    except Exception:
-            abort(404)
+    else:
+        abort(404)
 
 
-@app_views.route('/reviews/<review_id>', methods=['DELETE'],
-                 strict_slashes=False)
+@app_views.route('/reviews/<review_id>', methods=['DELETE'])
 def delete_review(review_id):
-    """fetches review obj from storage and deletes it.
-    returns empty json response with status code 200"""
-    try:
-        reviewObj = storage.get('Review', review_id)
-        reviewObj.delete()
+    """ deletes a Review object """
+    review = storage.get(Review, review_id)
+    if review:
+        storage.delete(review)
+        storage.save()
         return jsonify({}), 200
-    except Exception:
-            abort(404)
+    else:
+        abort(404)
 
 
 @app_views.route('/places/<place_id>/reviews', methods=['POST'],
                  strict_slashes=False)
-def post_review():
-    """handles creation for new review for specific place"""
-    if not request.json:
-        return jsonify({"error": "Not a JSON"}), 400
-
-    if 'user_id' not in request.json:
-        return jsonify({"error": "Missing user_id"}), 400
-
-    newReview = Review(user_id=request.get_json()["user_id"])
-
-    for key, value in request.get_json().items():
-        setattr(newReview, key, value)
-
-    newReview.save()
-
-    return (jsonify(newReview.to_dict()), 201)
-
-
-@app_views.route('/reviews/<review_id>', methods=['PUT'],
-                 strict_slashes=False)
-def put_review(review_id):
-    """updates review object by specific id"""
-    review = storage.get('Review', review_id)
-
-    if review is None:
+def create_review(place_id):
+    """ creates a Review object """
+    place = storage.get(Place, place_id)
+    if not place:
         abort(404)
 
-    if not request.json:
-        return jsonify({"error": "Not a JSON"}), 400
+    if not request.get_json():
+        abort(400, 'Not a JSON')
 
-    update_fields = ['id', 'created_at', 'user_id', 'updated_at']
-    for key, value in request.get_json().items():
-        if key not in update_fields:
-            setattr(review, key, value)
+    data = request.get_json()
+    if 'user_id' not in data:
+        abort(400, 'Missing user_id')
+    if 'text' not in data:
+        abort(400, 'Missing text')
 
+    user = storage.get(User, data['user_id'])
+    if not user:
+        abort(404)
+
+    data['place_id'] = place_id
+    review = Review(**data)
     review.save()
+    return jsonify(review.to_dict()), 201
 
-    return (jsonify(review.to_dict()), 200)
+
+@app_views.route('/reviews/<review_id>', methods=['PUT'], strict_slashes=False)
+def update_review(review_id):
+    """ updates a Review object """
+    review = storage.get(Review, review_id)
+    if review:
+        if not request.get_json():
+            abort(400, 'Not a JSON')
+
+        data = request.get_json()
+        ignore_keys = ['id', 'user_id', 'place_id', 'created_at', 'updated_at']
+        for key, value in data.items():
+            if key not in ignore_keys:
+                setattr(review, key, value)
+
+        review.save()
+        return jsonify(review.to_dict()), 200
+    else:
+        abort(404)
+
+
+@app_views.errorhandler(404)
+def not_found(error):
+    """ returns 404: Not Found """
+    response = {'error': 'Not found'}
+    return jsonify(response), 404
+
+
+@app_views.errorhandler(400)
+def bad_request(error):
+    """ return Bad Request message for illegal requests to the API """
+    response = {'error': 'Bad Request'}
+    return jsonify(response), 400
