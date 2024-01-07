@@ -71,6 +71,7 @@ def create_place(city_id):
     place.save()
     return jsonify(place.to_dict()), 201
 
+
 @app_views.route('/places/<place_id>', methods=['PUT'], strict_slashes=False)
 def update_place(place_id):
     """ updates a Place object """
@@ -90,17 +91,20 @@ def update_place(place_id):
     else:
         abort(404)
 
+
 @app_views.errorhandler(404)
 def not_found(error):
     """ returns 404: Not Found """
     response = {'error': 'Not found'}
     return jsonify(response), 404
 
+
 @app_views.errorhandler(400)
 def bad_request(error):
     """ returns Bad Request message for illegal requests to the API """
     response = {'error': 'Bad Request'}
     return jsonify(response), 400
+
 
 @app_views.route('/places_search', methods=['POST'], strict_slashes=False)
 def places_search():
