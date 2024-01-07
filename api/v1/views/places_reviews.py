@@ -3,7 +3,9 @@
 from flask import jsonify, make_response, abort, request, Blueprint
 from api.v1.views import app_views
 from models import storage
-from models import Review, Place
+from models.review import Review
+from models.place import Place
+from models.user import User
 
 
 @app_views.route('/places/<place_id>/reviews', methods=['GET'],
