@@ -21,10 +21,10 @@ def get_status():
 def get_stats():
     """ retrieves count using count() method"""
     return jsonify({
-        "amenities": models.storage.count(Amenity),
-        "cities": models.storage.count(City),
-        "places": models.storage.count(Place),
-        "reviews": models.storage.count(Review),
-        "states": models.storage.count(State),
-        "users": models.storage.count(User)
+        "amenities": storage.count('Amenity'),
+        "cities": storage.count('City'),
+        "places": storage.count('Place'),
+        "reviews": storage.count('Review'),
+        "states": storage.count('State'),
+        "users": storage.count('User')
     })
